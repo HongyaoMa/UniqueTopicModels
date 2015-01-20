@@ -18,12 +18,22 @@ addpath(genpath('../data'));
 
 V = 1000;
 k = 5;
-n_Doc = 2000;
-l_Doc = 500;
+n_Doc = 5000;
+l_Doc = 100;
 n_iter = 10;
+alpha0 = 0.03;
+adjust_anchor_range = 0.01;
 
-% Test - doing no normalization
-flag_no_norm = 0;
+% Fixed or variable lengths
+type_doc_length = 'random';
+
+% How to normalize the documents
+% doc_normalize_default = 'none';
+doc_normalize_default = 'original';
+
+% Test - Test different ways of doing the normalization
+flag_norm_none = 1;
+flag_norm_n = 1;
 
 % Test - adjust the anchors
 flag_adjust = 1;
@@ -34,10 +44,13 @@ flag_trueanchors = 1;
 % Plot the histograms
 flag_histogram = 0;
 
+% Plot find anchor results
+plot_anchors = 0;
+
 %% Anchors and Topic Distributions
 
 % Probability of sets of anchors
-p_anchor = [0.001, 0.01, 0.1];
+p_anchor = [0.01, 0.001, 0.0001];
 n_anchor = length(p_anchor);        % # of sets of anchors
 p_anchor = sort(p_anchor);          % Sort w.r.t. probabilities
 worst_anchors = 1:k;                % Anchors with lowest probability
@@ -60,11 +73,10 @@ A = gen_matrix_A(V, k, p_anchor);
 % %%%%%%%
 
 % The Dirichlet Parameters
-alpha = randi(10, 1, k);
-% alpha = [0.1, 0.1, 0.2, 0.3, 0.3];
+alpha = gen_alpha(alpha0, k, 'random');
 
 % Topic-topic co-occurrence matrix
-[R, alpha] = gen_matrix_R(alpha, 0.3);
+R = gen_matrix_R(alpha);
 
 % The word-word co-occurrence matrix
 Q = A * R * A';
@@ -79,6 +91,7 @@ type_anchors = zeros(n_iter, n_anchor);
 array_err_Q = zeros(n_iter, 1);
 Q_reg = zeros(n_iter, V, V);
 array_err_Q_KL = zeros(n_iter, V);
+array_err_Q_l2 = zeros(n_iter, V);
 
 % The A_rec
 array_err_A = zeros(n_iter, 1);
@@ -91,8 +104,21 @@ A_rec_best_reg = zeros(n_iter, V, k);
 A_rec_worst_reg = zeros(n_iter, V, k);
 
 % Without normalizing the docs
-if flag_no_norm
-    A_rec_best_reg_no_norm = zeros(n_iter, V, k);
+if flag_norm_none
+    
+    array_err_Q_none = zeros(n_iter, 1);
+    Q_reg_none = zeros(n_iter, V, V);
+    array_err_A_none = zeros(n_iter, 1);
+    A_rec_reg_none = zeros(n_iter, V, k);
+end
+
+% Normalizing w.r.t. n
+if flag_norm_n
+    array_err_Q_n = zeros(n_iter, 1);
+    Q_reg_n = zeros(n_iter, V, V);
+    
+    array_err_A_n = zeros(n_iter, 1);
+    A_rec_reg_n = zeros(n_iter, V, k);
 end
 
 % Adjusted anchors
@@ -123,23 +149,24 @@ for i_iter = 1:n_iter
     R_empirical = topics' * topics / n_Doc;
     
     % Documents
-    x = gen_Docs(topics, A, l_Doc, 'fixed');
+    x = gen_Docs(topics, A, l_Doc, type_doc_length);
     
     %% Analyze the matrix Q
     
     % Word-Word Co-occurrance
-    [Q_emp, Q_bar_emp] = gen_matrix_Q(x, 0, 'original');
+    [Q_emp, Q_bar_emp] = gen_matrix_Q(x, 0, doc_normalize_default);
     Q_reg(i_iter, :, :) = Q_emp;
     
     % Normalized Squared Error
     array_err_Q(i_iter) = norm(Q - Q_emp, 'fro') / norm(Q, 'fro');
     % array_err_Q_KL(i_iter, :) = compute_err(Q_bar, Q_bar_emp, 'row_KL')';
-    array_err_Q_l2(i_iter, :) = compute_err(Q_bar, Q_bar_emp, 'row_l2')';    
+    array_err_Q_l2(i_iter, :) = compute_err(Q_bar, Q_bar_emp, 'row_l2')';
+    
     %% Recover the topics
     
     % Find the anchors
     candidates = 1:V;
-    [anchor_inds, anchors] = find_anchors(Q_emp, candidates, k, 0);
+    [anchor_inds, anchors] = find_anchors(Q_emp, candidates, k, plot_anchors);
     % [anchor_inds_conv, anchors] = find_anchors_conv(Q_emp, candidates, k, 0);
     
     % Process the anchors
@@ -157,33 +184,65 @@ for i_iter = 1:n_iter
     anchor_inds = anchor_inds(ind_sort);
     
     % Recover the matrix A
-    [A_rec, R_rec] = recoverKL(Q_emp, anchor_inds);
-    % [A_rec, R_rec] = recover(Q_emp, anchor_inds)
+    [A_rec, R_rec] = recoverL2(Q_emp, anchor_inds);
     A_rec_reg(i_iter, :, :) = A_rec;
     
     array_err_A(i_iter) = norm(A - A_rec, 'fro') / norm(A, 'fro');
     
     %% Recover with better/worst set of anchors
-    [A_rec_best, R_rec] = recoverKL(Q_emp, best_anchors);
+    [A_rec_best, R_rec] = recoverL2(Q_emp, best_anchors);
     array_err_A_best(i_iter) = norm(A - A_rec_best, 'fro') / norm(A, 'fro');
     
-    [A_rec_worst, R_rec] = recoverKL(Q_emp, worst_anchors);
+    [A_rec_worst, R_rec] = recoverL2(Q_emp, worst_anchors);
     array_err_A_worst(i_iter) = norm(A - A_rec_worst, 'fro') / norm(A, 'fro');
     
     A_rec_best_reg(i_iter, :, :) = A_rec_best;
     A_rec_worst_reg(i_iter, :, :) = A_rec_worst;
     
-    %% No Normalization
-    if flag_no_norm
-        [Q_emp, Q_bar_emp] = gen_matrix_Q(x, 0, 1);
-        [A_rec_best, R_rec] = recoverKL(Q_emp, best_anchors);
-        array_err_A_best_no_norm(i_iter) = norm(A - A_rec_best, 'fro') / norm(A, 'fro');
-        A_rec_best_reg_no_norm(i_iter, :, :) = A_rec_best;
+    %% No normalizatioin
+    if flag_norm_none
+        
+        % The Q Matrix
+        [Q_emp_none, Q_bar_emp_none] = gen_matrix_Q(x, 0, 'none');
+        Q_reg_none(i_iter, :, :) = Q_emp_none;
+        array_err_Q_none(i_iter) = norm(Q - Q_emp_none, 'fro') / norm(Q, 'fro');
+        
+        % Find Anchors
+        [anchor_inds_none, ~] = find_anchors(Q_emp_none, candidates, k, plot_anchors);
+        if flag_adjust
+            anchor_inds_none = adjust_anchors(Q_emp_none, anchor_inds_none, 0.01);  
+        end
+        anchor_inds_none = process_anchors(anchor_inds_none);
+        
+        [A_rec_best_none, R_rec_none] = recoverL2(Q_emp_none, anchor_inds_none);
+        array_err_A_none(i_iter) = norm(A - A_rec_best_none, 'fro') / norm(A, 'fro');
+        A_rec_reg_none(i_iter, :, :) = A_rec_best_none;
+        
+    end
+    %% Normalize w.r.t. n
+    if flag_norm_n
+        
+        % The Q Matrix
+        [Q_emp_n, Q_bar_emp_n] = gen_matrix_Q(x, 0, 'none');
+        Q_reg_n(i_iter, :, :) = Q_emp_n;
+        array_err_Q_n(i_iter) = norm(Q - Q_emp_n, 'fro') / norm(Q, 'fro');
+        
+        % Find Anchors
+        [anchor_inds_n, ~] = find_anchors(Q_emp_n, candidates, k, plot_anchors);
+        if flag_adjust
+            anchor_inds_n = adjust_anchors(Q_emp_n, anchor_inds_n, 0.01);   
+        end
+        anchor_inds_n = process_anchors(anchor_inds_n);
+        
+        [A_rec_best_n, R_rec_n] = recoverL2(Q_emp_n, anchor_inds_n);
+        array_err_A_n(i_iter) = norm(A - A_rec_best_n, 'fro') / norm(A, 'fro');
+        A_rec_reg_n(i_iter, :, :) = A_rec_best_n;
+        
     end
     
     %% Adjusted anchors
     if flag_adjust
-        anchor_inds = adjust_anchors(Q, anchor_inds);
+        anchor_inds = adjust_anchors(Q_emp, anchor_inds, 0.01);
         
         % Process the anchors
         anchor_inds = sort(anchor_inds);
@@ -199,7 +258,7 @@ for i_iter = 1:n_iter
         [~, ind_sort] = sort(anchor_modk);
         anchor_inds = anchor_inds(ind_sort);
         
-        [A_rec, R_rec] = recoverKL(Q_emp, anchor_inds);
+        [A_rec, R_rec] = recoverL2(Q_emp, anchor_inds);
         A_rec_reg_adjusted(i_iter, :, :) = A_rec;
         array_err_A_adjusted(i_iter) = norm(A - A_rec, 'fro') / norm(A, 'fro');
     end
@@ -207,7 +266,7 @@ for i_iter = 1:n_iter
     %% True anchors
     if flag_trueanchors
         true_anchors = Q_bar(best_anchors, :);
-        [A_rec_trueanchors, R_rec_trueanchors] = recoverKL(Q_emp, anchor_inds, true_anchors);
+        [A_rec_trueanchors, R_rec_trueanchors] = recoverL2(Q_emp, anchor_inds, true_anchors);
         
         A_rec_reg_trueanchors(i_iter, :, :) = A_rec_trueanchors;
         array_err_A_trueanchors(i_iter) = norm(A - A_rec_trueanchors, 'fro') / norm(A, 'fro');
@@ -240,26 +299,26 @@ A_rec_worst_mean = reshape(mean(A_rec_worst_reg), [V, k]);
 err_A_rec_worst_mean = norm(A - A_rec_worst_mean, 'fro') / norm(A, 'fro')
 
 %% Recover using the empirical Q
-[A_rec, R_rec] = recoverKL(Q_emp_mean, best_anchors);
+[A_rec, R_rec] = recoverL2(Q_emp_mean, best_anchors);
 err_usingMeanQ = norm(A - A_rec, 'fro') / norm(A, 'fro')
 error_between_A = norm(A_rec_best_mean - A_rec, 'fro')./ norm(A, 'fro')
 
 %% Plot the histograms
 if flag_histogram
-figure;
-hist(array_err_A)
-hold on;
-title('array_{err_A}');
-
-figure;
-hist(array_err_A_best)
-hold on;
-title('array_{err_A,best}');
-
-figure;
-hist(array_err_A_worst)
-hold on;
-title('array_{err_A,worst}');
+    figure;
+    hist(array_err_A)
+    hold on;
+    title('array_{err_A}');
+    
+    figure;
+    hist(array_err_A_best)
+    hold on;
+    title('array_{err_A,best}');
+    
+    figure;
+    hist(array_err_A_worst)
+    hold on;
+    title('array_{err_A,worst}');
 end
 
 %% Correlations
@@ -312,6 +371,7 @@ if flag_adjust
     ylabel('err_A')
     
 end
+
 %% Exact anchors
 if flag_trueanchors
     mean_err_A_trueanchors = mean(array_err_A_trueanchors)
@@ -329,10 +389,27 @@ if flag_trueanchors
     ylabel('err_A')
 end
 
-%% No Normalization
-if flag_no_norm
-    mean_err_A_best_no_norm = mean(array_err_A_best_no_norm)
-    A_rec_best_mean_no_norm = reshape(mean(A_rec_best_reg_no_norm), [V, k]);
+%% Different types of normalization
+if flag_norm_n && flag_norm_n
+    figure;
+    hold on;
+    title('Different Normalizations');
+    legend('Original', 'None', 'w.r.t. n')
+    xlabel('err_Q')
+    ylabel('err_A')
+    if flag_adjust
+        scatter(array_err_Q, array_err_A_adjusted, 'b');    
+    else
+        scatter(array_err_Q, array_err_A, 'b');            
+    end
+    scatter(array_err_Q_none, array_err_A_none, 'k*');   
+    scatter(array_err_Q_n, array_err_A_n, 'rs');   
+    
+end
+
+if flag_norm_none
+    mean_err_A_best_no_norm = mean(array_err_A_none)
+    A_rec_best_mean_no_norm = reshape(mean(A_rec_reg_none), [V, k]);
     err_A_rec_best_mean_no_norm = norm(A - A_rec_best_mean_no_norm, 'fro') / norm(A, 'fro')
 end
 

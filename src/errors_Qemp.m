@@ -14,45 +14,19 @@ addpath(genpath('../src'));
 addpath(genpath('../data'));
 
 %% Distributions
-% Anchors: 1, 2, 3?
-A_1 = repmat(eye(3), 1, 3);
-% A_1 = [1 0 0 1 0 0 1 0 0; ...
-%         0 1 0 0 1 0 0 1 0; ...
-%         0 0 1 0 0 1 0 0 1];
 
-% Anchors: 1, 4, 7
-% Correctly recovered both anchors and topic distributions
-A_2 = [1 1 1 0 0 0 0 1 1; ...
-    0 1 1 1 1 1 0 0 0; ...
-    0 0 0 0 1 1 1 1 1];
+% Set 1
+[A, V, k] = gen_trickyA(2);
+alpha = gen_alpha(0.3, k, 'uniform');
 
-% Anchors: 1, 4, 7
-A_3 = [2 1 1 0 1 1 0 0 0; ...
-    0 0 0 2 1 1 0 1 1; ...
-    0 1 1 0 0 0 2 1 1 ];
+% % Set 2
+% V = 500;
+% k = 5;
+% p_anchor = 0.05;
+% A = gen_matrix_A(V, k, p_anchor);
+% alpha = gen_alpha(0.3, k, 'random');
 
-% No clear anchors
-A_4 = [1 1 1 1 1 1 0 0 0; ...
-    1 1 1 0 0 0 1 1 1; ...
-    0 0 0 1 1 1 1 1 1];
-
-A_5 = [eye(3), ones(3, 6)];
-
-A_6 = [eye(3)*3, eye(3)*2, eye(3)];
-A_7 = [eye(3)*9, eye(3)*3, eye(3)];
-
-A = A_1';
-A = A_2';
-
-% Sizes
-V = size(A, 1);
-k = size(A, 2);
-
-% Normalize
-A = A ./ repmat(sum(A), V, 1);
-
-alpha = ones(1, k);
-R = gen_matrix_R(alpha, 1);
+R = gen_matrix_R(alpha);
 % R = [1 0 0; 0 0.45 0.55; 0 0.55 0.45];
 
 Q = A * R * A';
@@ -67,8 +41,11 @@ l_Doc = 20;
 
 flag_no_normalize = 1;
 
-err_im = zeros(size(Q));
-err_im_bar = zeros(size(Q));
+err_im_l1 = zeros(size(Q));
+err_im_bar_l1 = zeros(size(Q));
+
+err_im_l2 = zeros(size(Q));
+err_im_bar_l2 = zeros(size(Q));
 
 err_Q = zeros(1, N_iter);
 err_Q_anchor = zeros(1, N_iter);
@@ -96,19 +73,20 @@ for i = 1:N_iter
     R_empirical = topics' * topics / n_Doc;
     
     %% Documents with fixed length
-    
     x = gen_Docs(topics, A, l_Doc, 'fixed');
     
     % Word-Word Co-occurrance
-    % [Q_emp, Q_emp_bar] = gen_matrix_Q(x, 0)
     [Q_emp, Q_emp_bar] = gen_matrix_Q(x, 0, 'original');
     
     % Normalized Squared Error
     err_Q(i) = norm(Q - Q_emp, 'fro') / norm(Q, 'fro');
     err_Q_anchor(i) = norm(Q(1:3,:) - Q_emp(1:3,:), 'fro') / norm(Q(1:3,:), 'fro');
     
-    err_im = err_im + abs(Q - Q_emp);
-    err_im_bar = err_im_bar + abs(Q_bar - Q_emp_bar);
+    err_im_l1 = err_im_l1 + abs(Q - Q_emp);
+    err_im_bar_l1 = err_im_bar_l1 + abs(Q_bar - Q_emp_bar);
+    
+    err_im_l2 = err_im_l2 + (Q - Q_emp).^2;
+    err_im_bar_l2 = err_im_bar_l2 + (Q_bar - Q_emp_bar).^2;
     
     %% Documents with random length
     x_rand = gen_Docs(topics, A, l_Doc, 'random');
@@ -135,6 +113,12 @@ for i = 1:N_iter
     
 end
 
+% Normalize the errors
+err_im_l1 = err_im_l1 / N_iter;
+err_im_bar_l1 = err_im_bar_l1 / N_iter;
+
+err_im_l2 = err_im_l1 / N_iter;
+err_im_bar_l2 = err_im_bar_l1 / N_iter;
 
 %% Mean errors
 mean_fixedlength = mean(err_Q)
@@ -147,32 +131,34 @@ mean_none = mean(err_Q_rand_none)
 mean_n32 = mean(err_Q_rand_n32)
 mean_n = mean(err_Q_rand_n)
 
-%% Visualize the errors
+%% Visualize the l1 errors
 
-n_imshow = 1;
+n_imshow = 5;
 figure;
 
 subplot(2, 2, 1);
 hold on;
 title('average(|Q - Q_{emp}|)')
-imshow(err_im/N_iter * 50 * n_imshow);
+imshow(err_im_l1 * 50 * n_imshow);
 
 subplot(2, 2, 2);
 hold on;
 title('average(|Q - Q_{emp}|) ./ Q')
-imshow(err_im ./ Q / N_iter * n_imshow);
+imshow(err_im_l1 ./ Q  * n_imshow);
 
 subplot(2, 2, 3);
 hold on;
 title('average(|Q_{bar} - Q_{bar, emp}|)')
-imshow(err_im_bar / N_iter*10 * n_imshow);
+imshow(err_im_bar_l1 *10 * n_imshow);
 
 subplot(2, 2, 4);
 hold on;
 title('average(|Q_{bar} - Q_{bar, emp}|) ./ Q_{bar}')
-imshow(err_im_bar./ Q_bar / N_iter * n_imshow);
+imshow(err_im_bar_l1./ Q_bar  * n_imshow);
 
 colormap('gray')
+
+
 
 %% Compare the fixed lengths and the random lengths
 figure;
@@ -180,31 +166,46 @@ figure;
 subplot(2, 2, 1);
 hold on;
 title('average(|Q - Q_{emp}|)')
-imshow(err_im/N_iter * 50 * n_imshow);
+imshow(err_im_l1 * 50 * n_imshow);
 
 subplot(2, 2, 2);
 hold on;
 title('average(|Q - Q_{emp, rand}|)')
-imshow(err_im_rand/N_iter * 50 * n_imshow);
+imshow(err_im_rand * 50 * n_imshow);
 
 subplot(2, 2, 3);
 hold on;
 title('average(|Q_{bar} - Q_{bar, emp}|)')
-imshow(err_im_bar / N_iter*10 * n_imshow);
+imshow(err_im_bar_l1 *10 * n_imshow);
 
 subplot(2, 2, 4);
 hold on;
 title('average(|Q_{bar} - Q_{bar, emp, rand}|)')
-imshow(err_im_bar_rand / N_iter*10 * n_imshow);
+imshow(err_im_bar_rand *10 * n_imshow);
 
 
-% imshow([err_im/N_iter*50, err_im ./ Q / N_iter; err_im_bar/N_iter*10, err_im_bar./ Q_bar / N_iter ]*10 );
-%
-% figure;
-% imshow(err_im ./ Q / 2000);
+%% Visualize the l2 errors
+n_imshow = 10000;
+figure;
 
-% % Histogram of the errors
-% figure;
-% hist(err_Q);
-% figure;
-% hist(err_Q_anchor);
+subplot(2, 2, 1);
+hold on;
+title('average(|Q - Q_{emp}|)')
+imshow(err_im_l2 * 50 * n_imshow);
+
+subplot(2, 2, 2);
+hold on;
+title('average(|Q - Q_{emp}|) ./ Q')
+imshow(err_im_l2 ./ Q  * n_imshow);
+
+subplot(2, 2, 3);
+hold on;
+title('average(|Q_{bar} - Q_{bar, emp}|)')
+imshow(err_im_bar_l2 *10 * n_imshow);
+
+subplot(2, 2, 4);
+hold on;
+title('average(|Q_{bar} - Q_{bar, emp}|) ./ Q_{bar}')
+imshow(err_im_bar_l2./ Q_bar  * n_imshow);
+
+colormap('gray')

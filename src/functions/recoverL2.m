@@ -1,8 +1,8 @@
-function [A_rec, R] = recoverKL(Q, anchor_inds, true_anchors)
+function [A_rec, R] = recoverL2(Q, anchor_inds, true_anchors)
 % RECOVERKL finds the topic distribution matrix A and the topic-topic
 % co-occurrence matrix R from the word-word co-occurrence matrix Q and a
 % given set of anchors
-% The algorithm used is the RecoverKL algorithm 
+% The algorithm used is the RecoverL2 algorithm 
 % Reference: Arora, S., Ge, R., Halpern, Y. Y., Mimno, D., Moitra, A., 
 % Sontag, D., … Zhu, M. (2013). A Practical Algorithm for Topic Modeling 
 % with Provable Guarantees. In Proceedings of The 30th International 

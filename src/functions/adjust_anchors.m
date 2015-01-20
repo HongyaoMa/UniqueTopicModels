@@ -30,7 +30,7 @@ for i_anchor = 1:k
     % Find the alternatives within the range
     Q_diff = Q_bar - repmat(curr_anchor, length(Q), 1);
     dist = sum(Q_diff.^2, 2) ./ sum(curr_anchor.^2);
-    ind_close_words = find(dist < range);
+    ind_close_words = find(dist < range );
     
     % Probability of the alternatives
     p_close_words = Q_rowsum(ind_close_words);
