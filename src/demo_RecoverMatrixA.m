@@ -1,5 +1,5 @@
 % Testing the Topic Recovery Algorithms
-% Demo or RecoverKL
+% Demo or recoverL2
 % Demo of Recover
 
 % The Autism NMF Project
@@ -31,12 +31,12 @@ n_anchor = k;
 anchor_inds = sort(anchor_inds)
 % anchor_inds = [1:9]
 
-%% RecoverKL
+%% recoverL2
 A
 anchor_inds = [1:9]
 k = 9;
 
-[A_rec, R] = recoverKL(Q, anchor_inds)
+[A_rec, R] = recoverL2(Q, anchor_inds)
 
 error_KL = norm(A(:, 1:9) - A_rec, 'fro') / norm(A(:, 1:9), 'fro')
 

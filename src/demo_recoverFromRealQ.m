@@ -87,16 +87,16 @@ anchor_modk(anchor_modk == 0) = k
 anchor_inds = anchor_inds(ind_sort);
 
 % Recover the matrix A
-[A_rec, R_rec] = recoverKL(Q_emp, anchor_inds);
+[A_rec, R_rec] = recoverL2(Q_emp, anchor_inds);
 % [A_rec, R_rec] = recover(Q_emp, anchor_inds)
 
 err_A = norm(A - A_rec, 'fro') / norm(A, 'fro')
 
 %% Recover with better/worst set of anchors
-[A_rec, R_rec] = recoverKL(Q_emp, best_anchors);
+[A_rec, R_rec] = recoverL2(Q_emp, best_anchors);
 err_A_best = norm(A - A_rec, 'fro') / norm(A, 'fro')
 
-[A_rec, R_rec] = recoverKL(Q_emp, worst_anchors);
+[A_rec, R_rec] = recoverL2(Q_emp, worst_anchors);
 err_A_worst = norm(A - A_rec, 'fro') / norm(A, 'fro')
 
 

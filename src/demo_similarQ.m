@@ -71,18 +71,18 @@ moreinds = sort(moreinds);
 %% Recover the topics
 
 % Recover with 3 anchors
-[A_rec, R_rec] = recoverKL(Q, anchor_inds)
+[A_rec, R_rec] = recoverL2(Q, anchor_inds)
 
 [A_rec, R_rec] = recover(Q, anchor_inds)
 
 % Recover with 5 anchors
-[A_rec, R_rec] = recoverKL(Q, moreinds)
+[A_rec, R_rec] = recoverL2(Q, moreinds)
 
 [A_rec, R_rec] = recover(Q, moreinds)
 
 % % Use find_anchors instead
 % [anchor_inds, anchors] = find_anchors(Q, candidates, rankQ, 0);
-% [A_rec, R_rec] = recoverKL(Q, anchor_inds)
+% [A_rec, R_rec] = recoverL2(Q, anchor_inds)
 % [A_rec, R_rec] = recover(Q, anchor_inds)
 
 %% Linear w.r.t. R
@@ -103,7 +103,7 @@ anchor_inds = sort(anchor_inds)
 moreinds = sort(moreinds)
 
 % Recover the topic distributions
-[A_rec, R_rec] = recoverKL(Q, anchor_inds)
+[A_rec, R_rec] = recoverL2(Q, anchor_inds)
 [A_rec, R_rec] = recover(Q, anchor_inds)
 
 % Error of the recovered R
@@ -125,11 +125,11 @@ anchor_inds = sort(anchor_inds)
 moreinds = sort(moreinds)
 
 % Recover the topic distributions
-[A_rec, R_rec] = recoverKL(Q, anchor_inds)
+[A_rec, R_rec] = recoverL2(Q, anchor_inds)
 [A_rec, R_rec] = recover(Q, anchor_inds)
 
 % Recover with 5 anchors
-[A_rec, R_rec] = recoverKL(Q, moreinds)
+[A_rec, R_rec] = recoverL2(Q, moreinds)
 [A_rec, R_rec] = recover(Q, moreinds)
 
 %% A = A1 + A2
@@ -148,11 +148,11 @@ anchor_inds = sort(anchor_inds)
 moreinds = sort(moreinds)
 
 % Recover the topic distributions
-[A_rec, R_rec] = recoverKL(Q, anchor_inds)
+[A_rec, R_rec] = recoverL2(Q, anchor_inds)
 [A_rec, R_rec] = recover(Q, anchor_inds)
 
 % Recover with 5 anchors
-[A_rec, R_rec] = recoverKL(Q, moreinds)
+[A_rec, R_rec] = recoverL2(Q, moreinds)
 [A_rec, R_rec] = recover(Q, moreinds)
 
 %% Find_anchors
@@ -160,7 +160,7 @@ moreinds = sort(moreinds)
 
 anchor_inds
 
-[A_rec, R_rec] = recoverKL(Q, anchor_inds)
+[A_rec, R_rec] = recoverL2(Q, anchor_inds)
 [A_rec, R_rec] = recover(Q, anchor_inds)
 
 %% Check the convex hull

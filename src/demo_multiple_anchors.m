@@ -19,7 +19,7 @@ addpath(genpath('../data'));
 V = 1000;
 k = 5;
 n_Doc = 5000;
-l_Doc = 100;
+l_Doc = 200;
 n_iter = 10;
 alpha0 = 0.03;
 adjust_anchor_range = 0.01;
