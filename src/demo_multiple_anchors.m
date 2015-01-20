@@ -41,36 +41,25 @@ flag_adjust = 1;
 % Test - using true anchors
 flag_trueanchors = 1;
 
-% Plot the histograms
-flag_histogram = 0;
-
-% Plot find anchor results
-plot_anchors = 0;
+% Other flags
+flag_histogram = 0;     % Plot the histograms
+plot_anchors = 0;       % Plot find anchor results
 
 %% Anchors and Topic Distributions
 
+% %%%%%%%%%%%%%%%%  The Toy Model %%%%%%%%%%%%%%%%%%%%%%%%
+% [A, V, k] = gen_
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Probability of sets of anchors
-p_anchor = [0.01, 0.001, 0.0001];
-n_anchor = length(p_anchor);        % # of sets of anchors
+p_anchor = [0.01, 0.001, 0.0001]*10;
+n_anchorSets = length(p_anchor);        % # of sets of anchors
 p_anchor = sort(p_anchor);          % Sort w.r.t. probabilities
 worst_anchors = 1:k;                % Anchors with lowest probability
-best_anchors = (n_anchor-1)*k + 1 : n_anchor*k; % with highest probability
+best_anchors = (n_anchorSets - 1)*k + 1 : n_anchorSets * k; % Anchors with highest probability
 
 % Topic distribution matrix A
 A = gen_matrix_A(V, k, p_anchor);
-
-% %%%%%%%
-% A = [1 1 1 0 0 0 0 1 1; ...
-%      0 1 1 1 1 1 0 0 0; ...
-%      0 0 0 0 1 1 1 1 1]';
-%
-% % Sizes
-% V = size(A, 1);
-% k = size(A, 2);
-%
-% % Normalize
-% A = A ./ repmat(sum(A), V, 1);
-% %%%%%%%
 
 % The Dirichlet Parameters
 alpha = gen_alpha(alpha0, k, 'random');
@@ -82,10 +71,10 @@ R = gen_matrix_R(alpha);
 Q = A * R * A';
 Q_bar = rowStoc(Q);
 
-%% Initialization
+%% Pre-allocating variables
 
 % The types of anchors
-type_anchors = zeros(n_iter, n_anchor);
+type_anchors = zeros(n_iter, n_anchorSets);
 
 % The Q
 array_err_Q = zeros(n_iter, 1);
@@ -105,7 +94,6 @@ A_rec_worst_reg = zeros(n_iter, V, k);
 
 % Without normalizing the docs
 if flag_norm_none
-    
     array_err_Q_none = zeros(n_iter, 1);
     Q_reg_none = zeros(n_iter, V, V);
     array_err_A_none = zeros(n_iter, 1);
@@ -116,14 +104,13 @@ end
 if flag_norm_n
     array_err_Q_n = zeros(n_iter, 1);
     Q_reg_n = zeros(n_iter, V, V);
-    
     array_err_A_n = zeros(n_iter, 1);
     A_rec_reg_n = zeros(n_iter, V, k);
 end
 
 % Adjusted anchors
 if flag_adjust
-    type_anchors_adjusted = zeros(n_iter, n_anchor);
+    type_anchors_adjusted = zeros(n_iter, n_anchorSets);
     A_rec_reg_adjusted = zeros(n_iter, V, k);
     array_err_A_adjusted = zeros(n_iter, 1);
 end
@@ -169,19 +156,17 @@ for i_iter = 1:n_iter
     [anchor_inds, anchors] = find_anchors(Q_emp, candidates, k, plot_anchors);
     % [anchor_inds_conv, anchors] = find_anchors_conv(Q_emp, candidates, k, 0);
     
-    % Process the anchors
+    % Find the "types" of anchors
     anchor_inds = sort(anchor_inds);
-    for i_k = 1:n_anchor
-        type_anchors(i_iter, i_k) = sum(anchor_inds <= k  *i_k);
+    for i_k = 1:n_anchorSets
+        type_anchors(i_iter, i_k) = sum(anchor_inds <= k  * i_k);
     end
-    for i_k = n_anchor:-1:2
+    for i_k = n_anchorSets:-1:2
         type_anchors(i_iter, i_k) = type_anchors(i_iter, i_k) - type_anchors(i_iter, i_k-1);
     end
     
-    anchor_modk = mod(anchor_inds, k);
-    anchor_modk(anchor_modk == 0) = k;
-    [~, ind_sort] = sort(anchor_modk);
-    anchor_inds = anchor_inds(ind_sort);
+    % Reorder the anchors
+    anchor_inds = reorder_anchors(anchor_inds);
     
     % Recover the matrix A
     [A_rec, R_rec] = recoverL2(Q_emp, anchor_inds);
@@ -212,7 +197,7 @@ for i_iter = 1:n_iter
         if flag_adjust
             anchor_inds_none = adjust_anchors(Q_emp_none, anchor_inds_none, 0.01);  
         end
-        anchor_inds_none = process_anchors(anchor_inds_none);
+        anchor_inds_none = reorder_anchors(anchor_inds_none);
         
         [A_rec_best_none, R_rec_none] = recoverL2(Q_emp_none, anchor_inds_none);
         array_err_A_none(i_iter) = norm(A - A_rec_best_none, 'fro') / norm(A, 'fro');
@@ -232,7 +217,7 @@ for i_iter = 1:n_iter
         if flag_adjust
             anchor_inds_n = adjust_anchors(Q_emp_n, anchor_inds_n, 0.01);   
         end
-        anchor_inds_n = process_anchors(anchor_inds_n);
+        anchor_inds_n = reorder_anchors(anchor_inds_n);
         
         [A_rec_best_n, R_rec_n] = recoverL2(Q_emp_n, anchor_inds_n);
         array_err_A_n(i_iter) = norm(A - A_rec_best_n, 'fro') / norm(A, 'fro');
@@ -246,10 +231,10 @@ for i_iter = 1:n_iter
         
         % Process the anchors
         anchor_inds = sort(anchor_inds);
-        for i_k = 1:n_anchor
+        for i_k = 1:n_anchorSets
             type_anchors_adjusted(i_iter, i_k) = sum(anchor_inds <= k  *i_k);
         end
-        for i_k = n_anchor:-1:2
+        for i_k = n_anchorSets:-1:2
             type_anchors_adjusted(i_iter, i_k) = type_anchors_adjusted(i_iter, i_k) - type_anchors_adjusted(i_iter, i_k-1);
         end
         
@@ -298,7 +283,7 @@ mean_err_A_worst = mean(array_err_A_worst)
 A_rec_worst_mean = reshape(mean(A_rec_worst_reg), [V, k]);
 err_A_rec_worst_mean = norm(A - A_rec_worst_mean, 'fro') / norm(A, 'fro')
 
-%% Recover using the empirical Q
+%% Recover using the mean of the empirical Q's
 [A_rec, R_rec] = recoverL2(Q_emp_mean, best_anchors);
 err_usingMeanQ = norm(A - A_rec, 'fro') / norm(A, 'fro')
 error_between_A = norm(A_rec_best_mean - A_rec, 'fro')./ norm(A, 'fro')
@@ -391,26 +376,38 @@ end
 
 %% Different types of normalization
 if flag_norm_n && flag_norm_n
+
     figure;
     hold on;
-    title('Different Normalizations');
-    legend('Original', 'None', 'w.r.t. n')
-    xlabel('err_Q')
-    ylabel('err_A')
+    
+    % Scatter the results
     if flag_adjust
         scatter(array_err_Q, array_err_A_adjusted, 'b');    
     else
         scatter(array_err_Q, array_err_A, 'b');            
     end
     scatter(array_err_Q_none, array_err_A_none, 'k*');   
-    scatter(array_err_Q_n, array_err_A_n, 'rs');   
+    scatter(array_err_Q_n, array_err_A_n, 'rs');  
     
+    legend('Original', 'None', 'w.r.t. n')
+    title('Different Normalizations');
+    xlabel('err_Q')
+    ylabel('err_A')    
 end
 
+% Display the means
 if flag_norm_none
-    mean_err_A_best_no_norm = mean(array_err_A_none)
-    A_rec_best_mean_no_norm = reshape(mean(A_rec_reg_none), [V, k]);
-    err_A_rec_best_mean_no_norm = norm(A - A_rec_best_mean_no_norm, 'fro') / norm(A, 'fro')
+    mean_array_err_Q_none = mean(array_err_Q_none)
+    mean_err_A_none = mean(array_err_A_none)
+    A_rec_mean_none = reshape(mean(A_rec_reg_none), [V, k]);
+    err_A_rec_mean_none = norm(A - A_rec_mean_none, 'fro') / norm(A, 'fro')
+end
+
+if flag_norm_n
+    mean_array_err_Q_n = mean(array_err_Q_n)
+    mean_err_A_n = mean(array_err_A_n)
+    A_rec_mean_n = reshape(mean(A_rec_reg_n), [V, k]);
+    err_A_rec_mean_n = norm(A - A_rec_mean_n, 'fro') / norm(A, 'fro')
 end
 
 %% Row sum of l2 error
@@ -432,17 +429,17 @@ plot(array_err_Q_l2(:, 2*k+1:3*k)', 'k*' );
 xlabel('anchors');
 ylabel('l2 error');
 
-%% KL Divergence
-mean_KL = mean(array_err_Q_KL(:, 1:3*k))
-figure;
-stem(mean_KL)
-
-figure;
-hold on;
-plot(array_err_Q_KL(:, 1:k)', 'rs' );
-plot(array_err_Q_KL(:, k+1:2*k)', 'bo' );
-plot(array_err_Q_KL(:, 2*k+1:3*k)', 'k*' );
-
-% legend('worst anchors', 'okay anchors', 'best anchors');
-xlabel('anchors');
-ylabel('KL Divergence');
+% %% KL Divergence
+% mean_KL = mean(array_err_Q_KL(:, 1:3*k))
+% figure;
+% stem(mean_KL)
+% 
+% figure;
+% hold on;
+% plot(array_err_Q_KL(:, 1:k)', 'rs' );
+% plot(array_err_Q_KL(:, k+1:2*k)', 'bo' );
+% plot(array_err_Q_KL(:, 2*k+1:3*k)', 'k*' );
+% 
+% % legend('worst anchors', 'okay anchors', 'best anchors');
+% xlabel('anchors');
+% ylabel('KL Divergence');

@@ -1,4 +1,4 @@
-% Testing the Topic Recovery Algorithms
+% Testing the Topic Recovery Algorithms with correct Q matrices
 % Demo or recoverL2
 % Demo of Recover
 

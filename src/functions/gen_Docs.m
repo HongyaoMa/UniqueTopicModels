@@ -29,6 +29,8 @@ switch length_type
         array_l_Doc = l_Doc;
     case 'random'
         array_l_Doc = randi([2, 2*l_Doc-2], n_docs, 1); 
+    otherwise
+        error('Unknown type of the lengths!');
 end
 
 % Word counts in each documenet
