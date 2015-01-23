@@ -199,6 +199,7 @@ for i_iter = 1:n_iter
         end
         anchor_inds_none = reorder_anchors(anchor_inds_none);
         
+        % Recover the A matrix
         [A_rec_best_none, R_rec_none] = recoverL2(Q_emp_none, anchor_inds_none);
         array_err_A_none(i_iter) = norm(A - A_rec_best_none, 'fro') / norm(A, 'fro');
         A_rec_reg_none(i_iter, :, :) = A_rec_best_none;
@@ -219,6 +220,7 @@ for i_iter = 1:n_iter
         end
         anchor_inds_n = reorder_anchors(anchor_inds_n);
         
+        % Recover the A matrix
         [A_rec_best_n, R_rec_n] = recoverL2(Q_emp_n, anchor_inds_n);
         array_err_A_n(i_iter) = norm(A - A_rec_best_n, 'fro') / norm(A, 'fro');
         A_rec_reg_n(i_iter, :, :) = A_rec_best_n;

@@ -1,10 +1,9 @@
-% Demo of l1-error in Q_emp
+% Demo of l1-error and l2-error in Q_emp
 
 % The Autism NMF Project
 % Hongyao Ma
 % Created:  01/11/2015
-% Modified: 01/16/2015
-
+% Modified: 01/22/2015
 clear;
 clc;
 close all;

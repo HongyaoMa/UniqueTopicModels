@@ -1,6 +1,18 @@
 function x = gen_Docs(topics, A, l_Doc, length_type)
 % gen_Doc generates documents with topic distribution A and the probability
 % of topics "topics". The length of documents generated is l_Doc
+%
+% INPUT
+%   topics - n_doc by k matrix, distribution over topics
+%   A - the topic distribution matrix
+%   l_Doc - the expected length of documents
+%   length_type - how to generate the lengths
+%       'fixed' - every document has the same length
+%       'uniform' - documents have lengths uniformly distributed [1, 2*l-1]
+%
+% OUTPUT
+%   x - word count matrix, l_Doc by # of words
+%
 
 % The Autism NMF Project
 % Hongyao Ma
