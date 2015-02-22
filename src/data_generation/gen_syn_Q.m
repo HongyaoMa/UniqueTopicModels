@@ -16,7 +16,7 @@ k = 20;
 
 %% The A Matrix
 % Probability for Anchors Words
-p_anchor = 0.00001;
+p_anchor = 0.01;
 A1 = eye(k) * p_anchor;
 
 A2 = rand(V-k, k);

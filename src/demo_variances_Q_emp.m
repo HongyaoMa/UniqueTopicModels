@@ -95,6 +95,7 @@ type_length = 'fixed';
 var = zeros(V);
 var1 = zeros(V);
 var2 = zeros(V);
+
 tic
 for i_iter = 1:n_iter
     if mod(i_iter, 5000) == 0

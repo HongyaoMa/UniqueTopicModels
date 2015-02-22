@@ -14,20 +14,23 @@ addpath(genpath('../src'));
 addpath(genpath('../data'));
 
 %% Parameters
-V = 1000;
+V = 500;
 k = 5;
-n_Doc = 2000;
+n_Doc = 1000;
 l_Doc = 50;
 alpha0 = 0.03;
 
 % Probability of sets of anchors
 p_anchor = [0.001, 0.01, 0.1];
+% p_anchor = 0.01;
 p_anchor = sort(p_anchor);
 worst_anchors = 1:k;
 best_anchors = (length(p_anchor)-1) * k + 1:(length(p_anchor))*k;
 
 % Topic distribution matrix A
 A = gen_matrix_A(V, k, p_anchor);
+
+% [A, V, k] = gen_trickyA(3)
 
 % The Dirichlet Parameters
 alpha = gen_alpha(alpha0, k, 'random');
@@ -61,25 +64,32 @@ candidates = 1:V;
 % [anchor_inds_conv, anchors] = find_anchors_conv(Q_emp, candidates, k, 0);
 
 % Reorder the anchors
-anchor_inds_n = reorder_anchors(anchor_inds)
-        
+anchor_inds = reorder_anchors(anchor_inds)
+% anchor_inds = sort(anchor_inds)      
+
 % Recover the matrix A
 [A_rec, R_rec] = recoverL2(Q_emp, anchor_inds);
 % [A_rec, R_rec] = recover(Q_emp, anchor_inds)
 
 err_A = norm(A - A_rec, 'fro') / norm(A, 'fro')
 
-%% Recover with better/worst set of anchors
-[A_rec, R_rec] = recoverL2(Q_emp, best_anchors);
-err_A_best = norm(A - A_rec, 'fro') / norm(A, 'fro')
+% %% Recover with better/worst set of anchors
+% [A_rec, R_rec] = recoverL2(Q_emp, best_anchors);
+% err_A_best = norm(A - A_rec, 'fro') / norm(A, 'fro')
+% 
+% [A_rec, R_rec] = recoverL2(Q_emp, worst_anchors);
+% err_A_worst = norm(A - A_rec, 'fro') / norm(A, 'fro')
+% 
+% 
+% %% With Recover
+% [A_rec, R_rec] = recover(Q_emp, best_anchors);
+% err_A_best = norm(A - A_rec, 'fro') / norm(A, 'fro')
+% 
+% [A_rec, R_rec] = recover(Q_emp, worst_anchors);
+% err_A_worst = norm(A - A_rec, 'fro') / norm(A, 'fro')
 
-[A_rec, R_rec] = recoverL2(Q_emp, worst_anchors);
-err_A_worst = norm(A - A_rec, 'fro') / norm(A, 'fro')
+%% 
+p_emp = sum(Q_emp)';
+var_analytical = var_Q(p_emp, l_Doc);
 
-
-%% With Recover
-[A_rec, R_rec] = recover(Q_emp, best_anchors);
-err_A_best = norm(A - A_rec, 'fro') / norm(A, 'fro')
-
-[A_rec, R_rec] = recover(Q_emp, worst_anchors);
-err_A_worst = norm(A - A_rec, 'fro') / norm(A, 'fro')
+save('test_data_2', 'Q_emp', 'A', 'var_analytical', 'l_Doc','k', 'V', 'Q');

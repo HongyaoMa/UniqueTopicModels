@@ -22,6 +22,8 @@ Q_rowsum = sum(Q, 2);
 Q_bar = rowStoc(Q);
 
 % Rows corresponding to anchors
+size(Q_bar)
+anchor_inds
 Qs_bar = Q_bar(anchor_inds, :);                 % k by V matrix
 
 % Recover using true anchors (normalized)

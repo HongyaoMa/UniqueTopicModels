@@ -25,8 +25,3 @@ var_analytical(1:V+1:end) = var_analytical_diag;
 % Normalized each document by l_doc(l_doc-1)
 var_analytical = var_analytical / l_Doc^2 / (l_Doc - 1)^2;
 
-%% 
-Epi2 = 
-
-
-Epi2pj2 = 
